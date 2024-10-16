@@ -1,12 +1,9 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
 name: Build and deploy Node.js app to Azure Web App - devapp
 
 on:
   push:
     branches:
-      - backend
+      - backend  # Trigger deployment on 'backend' branch
   workflow_dispatch:
 
 jobs:
@@ -16,21 +13,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Set up the latest Node.js version (20.x)
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: '20.x'  # Use Node.js 20 to avoid deprecation warnings
 
-      - name: npm install, build, and test
+      # Install dependencies, build the app (if applicable), and run tests (if any)
+      - name: Install dependencies and build
         run: |
           npm install
-          npm run build --if-present
-          npm run test --if-present
+          npm run build --if-present  # If there's a build script in package.json
+          npm run test --if-present   # If there are tests
 
+      # Package the build for deployment
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        run: zip -r release.zip ./*
 
-      - name: Upload artifact for deployment job
+      # Upload artifact to be used in the deployment step
+      - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: node-app
@@ -43,29 +44,32 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write #This is required for requesting the JWT
+      id-token: write  # Required for requesting the JWT
 
     steps:
+      # Download the artifact from the build job
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: node-app
 
+      # Unzip the artifact to prepare it for deployment
       - name: Unzip artifact for deployment
         run: unzip release.zip
-      
+
+      # Log in to Azure using credentials stored in GitHub Secrets
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_2A6ECE65EA8A46D5AEFA6F5B58D5DD3A }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_40D7A9DDEE85434881A8A05D4E0ADD71 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1F59681F3A8A441480FB8488E5E9682F }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
-      - name: 'Deploy to Azure Web App'
+      # Deploy the app to the Azure Web App service
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'devapp'
+          app-name: 'devapp'  # The name of your Azure Web App
           slot-name: 'Production'
-          package: .
-          
+          package: '.'
